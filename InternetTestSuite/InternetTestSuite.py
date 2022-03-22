@@ -19,8 +19,6 @@ class Settings:
             self.email_time = config['Application Config']['Log Time']
             
         
-
-
 # If a ping to facebook or google make it though you have internet, otherwise you 
 # either don't have internet or something very unusual is happening.
 def checkConnection():
@@ -41,4 +39,12 @@ configPath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.i
 print(configPath)
 
 settings = Settings(configPath)
+
+context = ssl.create_default_context()
+
+with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+    server.login(settings.address, settings.password)
+
+    server.sendmail(settings.address, 'test@testemail.com' , 'This is a test')
+
 
