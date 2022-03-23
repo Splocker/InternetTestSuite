@@ -3,7 +3,8 @@ from turtle import speed
 from filelock import FileLock
 from threading import *
 from pythonping import ping
-from email.message import EmailMessage
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 config_folder = os.path.dirname(os.path.realpath(__file__))
 
@@ -15,8 +16,10 @@ class Settings:
         config = configparser.ConfigParser()
         with open(self.path, 'r', encoding='utf-8') as f:
             config.read_file(f)
-            self.address = config['Email']['Address']
-            self.password = config['Email']['Password']
+            self.email_address = config['Email']['Address']
+            self.email_password = config['Email']['Password']
+            self.receiving_email = config['Email']['Receiving Email']
+            self.deployment_id = config['Application Config']['Identifier']
             self.ping_frequency = config['Application Config'].getfloat('Pint Frequency')
             self.speedtest_frequency = config['Application Config'].getfloat('Speedtest Frequency')
             self.email_frequency = config['Application Config']['Log Frequency']
@@ -63,18 +66,37 @@ def writeConnectionStatus(status):
 def writeSpeedtestResults(results):
     writeToCSV('speedtest_results.csv',['Timestamp', 'Download', 'Upload'], results)
 
-if __name__=="__main__":
+def constructMessage(settings: Settings):
+    message = MIMEMultipart('alternative')
 
-    for i in range(3):
-        Thread(target=writeConnectionStatus, args=[checkConnection()]).start()
-        Thread(target=writeSpeedtestResults, args=[speedTest()]).start()
-        
+    if settings.email_frequency == ['M', 'm']:
+        message['Subject'] = f'Monthly {settings.deployment_id} Connection Report'
+    elif settings.email_frequency == 'W' or settings.email_frequency ==  'w':
+        message['Subject'] = f'Weekly {settings.deployment_id} Connection Report'
+    elif settings.email_frequency == ['D', 'd']:
+        message['Subject'] = f'Daily {settings.deployment_id} Connection Report'
+
+    message['From'] = settings.email_address
+    message['To'] = settings.receiving_email
+    
+    message.attach(MIMEText('This is a test.', 'plain'))
+
+    return message
+
+def sendEmail(settings: Settings, message: MIMEMultipart):
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.login(settings.email_address, settings.email_password)
+
+        server.sendmail(settings.email_address, settings.receiving_email, message.as_string())
+
+
+if __name__=="__main__":
 
     settings = Settings(config_folder)
 
-    context = ssl.create_default_context()
-
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-        server.login(settings.address, settings.password)
-
-        server.sendmail(settings.address, 'sethaplatt@gmail.com' , 'This is a test')
+    # for i in range(3):
+    #     Thread(target=writeConnectionStatus, args=[checkConnection()]).start()
+    #     Thread(target=writeSpeedtestResults, args=[speedTest()]).start()
+        
+    sendEmail(settings, constructMessage(settings))
