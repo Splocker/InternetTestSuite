@@ -1,5 +1,6 @@
-from tabnanny import check
-import time, smtplib, os, configparser, _thread, speedtest, ssl, csv
+import time, smtplib, os, configparser, speedtest, ssl, csv
+from filelock import FileLock
+from threading import *
 from pythonping import ping
 from email.message import EmailMessage
 
@@ -39,24 +40,36 @@ def speedTest():
 
 #Write the status of a connection check to the file
 def writeConnectionStatus(status):
-    created = False
-    if (not os.path.exists('connection_status.csv')):
-        created = True
-    with open('connection_status', 'w+',newline='') as file:
-        writer = csv.writer(file)
-        if created is True: 
-            writer.writerow(['Timestamp','Status'])
-        writer.writerow(status)
+
+    lock = FileLock('connection_status.csv.lock')
+    lock.acquire()
+    with lock:
+        if os.path.exists('connection_status.csv') and os.path.isfile('connection_status.csv'):
+            with open('connection_status.csv', 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(status)
+        else:
+            with open('connection_status.csv', 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(['Timestamp','Status'])
+                writer.writerow(status)
+
+    lock.release()
 
 def checkAndStoreConnectionStatus():
     writeConnectionStatus(checkConnection())
-    
 
-settings = Settings(config_folder)
+if __name__=="__main__":
 
-context = ssl.create_default_context()
+    for i in range(3):
+        Thread(target=checkAndStoreConnectionStatus, args=[]).start()
+        
 
-with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-    server.login(settings.address, settings.password)
+    settings = Settings(config_folder)
 
-    server.sendmail(settings.address, 'test@testemail.com' , 'This is a test')
+    context = ssl.create_default_context()
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.login(settings.address, settings.password)
+
+        server.sendmail(settings.address, 'sethaplatt@gmail.com' , 'This is a test')
