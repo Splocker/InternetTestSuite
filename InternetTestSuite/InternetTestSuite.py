@@ -1,5 +1,4 @@
 import time, smtplib, os, configparser, speedtest, ssl, csv
-from turtle import speed
 from filelock import FileLock
 from threading import *
 from pythonping import ping
@@ -69,11 +68,11 @@ def writeSpeedtestResults(results):
 def constructMessage(settings: Settings):
     message = MIMEMultipart('alternative')
 
-    if settings.email_frequency == ['M', 'm']:
+    if settings.email_frequency == 'M' or settings.email_frequency == 'm':
         message['Subject'] = f'Monthly {settings.deployment_id} Connection Report'
     elif settings.email_frequency == 'W' or settings.email_frequency ==  'w':
         message['Subject'] = f'Weekly {settings.deployment_id} Connection Report'
-    elif settings.email_frequency == ['D', 'd']:
+    elif settings.email_frequency == 'D' or settings.email_frequency ==  'd':
         message['Subject'] = f'Daily {settings.deployment_id} Connection Report'
 
     message['From'] = settings.email_address
@@ -95,8 +94,8 @@ if __name__=="__main__":
 
     settings = Settings(config_folder)
 
-    # for i in range(3):
-    #     Thread(target=writeConnectionStatus, args=[checkConnection()]).start()
-    #     Thread(target=writeSpeedtestResults, args=[speedTest()]).start()
+    for i in range(1):
+        Thread(target=writeConnectionStatus, args=[checkConnection()]).start()
+        Thread(target=writeSpeedtestResults, args=[speedTest()]).start()
         
     sendEmail(settings, constructMessage(settings))
