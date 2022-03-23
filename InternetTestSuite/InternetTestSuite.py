@@ -1,4 +1,5 @@
 import time, smtplib, os, configparser, speedtest, ssl, csv
+from turtle import speed
 from filelock import FileLock
 from threading import *
 from pythonping import ping
@@ -34,35 +35,39 @@ def checkConnection():
 
 #Execute a speedTest and return the results in Mbit/s as a tuple (Download, Upload)
 def speedTest():
+    timeStamp = time.time()
     speedTest = speedtest.Speedtest()
     
-    return (speedTest.download()/1000000, speedTest.upload()/1000000)
+    return (timeStamp, speedTest.download()/1000000, speedTest.upload()/1000000)
 
-#Write the status of a connection check to the file
-def writeConnectionStatus(status):
-
-    lock = FileLock('connection_status.csv.lock')
+def writeToCSV(file, headers, data):
+    lock = FileLock(file + '.lock')
     lock.acquire()
     with lock:
-        if os.path.exists('connection_status.csv') and os.path.isfile('connection_status.csv'):
-            with open('connection_status.csv', 'a', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(status)
+        if os.path.exists(file) and os.path.isfile(file):
+            with open(file, 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(data)
         else:
-            with open('connection_status.csv', 'w', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(['Timestamp','Status'])
-                writer.writerow(status)
+            with open(file, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(headers)
+                writer.writerow(data)
 
     lock.release()
 
-def checkAndStoreConnectionStatus():
-    writeConnectionStatus(checkConnection())
+#Write the status of a connection check to the file
+def writeConnectionStatus(status):
+    writeToCSV('connection_status.csv', ['Timestamp','Live'], status)
+
+def writeSpeedtestResults(results):
+    writeToCSV('speedtest_results.csv',['Timestamp', 'Download', 'Upload'], results)
 
 if __name__=="__main__":
 
     for i in range(3):
-        Thread(target=checkAndStoreConnectionStatus, args=[]).start()
+        Thread(target=writeConnectionStatus, args=[checkConnection()]).start()
+        Thread(target=writeSpeedtestResults, args=[speedTest()]).start()
         
 
     settings = Settings(config_folder)
