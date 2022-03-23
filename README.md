@@ -7,6 +7,7 @@ files and and emails with data summaries will be sent regularally, email schedul
 Required non-standard libraries:
 - speedtest
 - pythonping
+- filelock
 
 Planned Feature List:
 - Config file
