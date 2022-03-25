@@ -1,4 +1,4 @@
-import time, smtplib, os, configparser, speedtest, ssl, csv
+import time, smtplib, os, configparser, ssl, csv, speedtest
 from filelock import FileLock
 from threading import *
 from pythonping import ping
@@ -30,17 +30,24 @@ class Settings:
 # either don't have internet or something very unusual is happening.
 def checkConnection():
     timeStamp = time.time()
-    if ((ping('facebook.com').success != False) or (ping('google.com').success != False)):
-        return (timeStamp, True)
-    else:
+    try:
+        if ((ping('facebook.com').success != False) or (ping('google.com').success != False)):
+            return (timeStamp, True)
+        else:
+            return (timeStamp, False)
+    except RuntimeError as e:
         return (timeStamp, False)
+        
+    
 
 #Execute a speedTest and return the results in Mbit/s as a tuple (Download, Upload)
 def speedTest():
     timeStamp = time.time()
-    speedTest = speedtest.Speedtest()
-    
-    return (timeStamp, speedTest.download()/1000000, speedTest.upload()/1000000)
+    if checkConnection()[1]:
+        speedTest = speedtest.Speedtest()
+        return (timeStamp, speedTest.download()/1000000, speedTest.upload()/1000000)
+    else:
+        return (timeStamp, 0, 0)
 
 def writeToCSV(file, headers, data):
     lock = FileLock(file + '.lock')
@@ -95,7 +102,7 @@ if __name__=="__main__":
     settings = Settings(config_folder)
 
     for i in range(1):
-        Thread(target=writeConnectionStatus, args=[checkConnection()]).start()
+        #Thread(target=writeConnectionStatus, args=[checkConnection()]).start()
         Thread(target=writeSpeedtestResults, args=[speedTest()]).start()
         
-    sendEmail(settings, constructMessage(settings))
+    #sendEmail(settings, constructMessage(settings))
