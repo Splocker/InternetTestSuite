@@ -341,3 +341,7 @@ healthchecksdb
 
 #config file
 config.ini
+
+#Data storage files
+speedtest_results.csv
+connection_status.csv
