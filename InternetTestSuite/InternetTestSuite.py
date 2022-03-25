@@ -24,7 +24,6 @@ class Settings:
             self.email_frequency = config['Application Config']['Log Frequency']
             self.email_day = config['Application Config']['Log Day']
             self.email_time = config['Application Config']['Log Time']
-            
         
 # If a ping to facebook or google make it though you have internet, otherwise you 
 # either don't have internet or something very unusual is happening.
@@ -37,8 +36,6 @@ def checkConnection():
             return (timeStamp, False)
     except RuntimeError as e:
         return (timeStamp, False)
-        
-    
 
 #Execute a speedTest and return the results in Mbit/s as a tuple (Download, Upload)
 def speedTest():
@@ -49,9 +46,11 @@ def speedTest():
     else:
         return (timeStamp, 0, 0)
 
+#Pass in the file to be written to, the headers for the first line of the file and the adat to be written.
 def writeToCSV(file, headers, data):
     lock = FileLock(file + '.lock')
     lock.acquire()
+    
     with lock:
         if os.path.exists(file) and os.path.isfile(file):
             with open(file, 'a', newline='') as f:
@@ -69,9 +68,11 @@ def writeToCSV(file, headers, data):
 def writeConnectionStatus(status):
     writeToCSV('connection_status.csv', ['Timestamp','Live'], status)
 
+#Run a speedtest and write the results to a CSV
 def writeSpeedtestResults(results):
     writeToCSV('speedtest_results.csv',['Timestamp', 'Download', 'Upload'], results)
 
+#Construc the and return a MIMEMultipart email message.
 def constructMessage(settings: Settings):
     message = MIMEMultipart('alternative')
 
@@ -89,6 +90,7 @@ def constructMessage(settings: Settings):
 
     return message
 
+#Send a passed MIMEMultipart email message.
 def sendEmail(settings: Settings, message: MIMEMultipart):
     context = ssl.create_default_context()
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
@@ -96,13 +98,12 @@ def sendEmail(settings: Settings, message: MIMEMultipart):
 
         server.sendmail(settings.email_address, settings.receiving_email, message.as_string())
 
-
 if __name__=="__main__":
 
     settings = Settings(config_folder)
 
     for i in range(1):
-        #Thread(target=writeConnectionStatus, args=[checkConnection()]).start()
+        Thread(target=writeConnectionStatus, args=[checkConnection()]).start()
         Thread(target=writeSpeedtestResults, args=[speedTest()]).start()
         
-    #sendEmail(settings, constructMessage(settings))
+    sendEmail(settings, constructMessage(settings))
