@@ -1,5 +1,4 @@
 import time, smtplib, os, configparser, ssl, csv, speedtest, matplotlib
-from tokenize import Double
 from filelock import FileLock
 from threading import *
 from pythonping import ping
@@ -28,7 +27,7 @@ class Settings:
 
 # Simple class for conneciton status result storage
 class connection_status:
-    def __init__(self, time: Double, connection_up: bool) -> None:
+    def __init__(self, time: float, connection_up: bool) -> None:
         self._time = time
         self._connection_up = connection_up
 
@@ -42,7 +41,7 @@ class connection_status:
 
 # Simple class for speedtest result storage
 class speedtest_result:
-    def __init__(self, time: Double, download: Double, upload: Double) -> None:
+    def __init__(self, time: float, download: float, upload: float) -> None:
         self._time = time
         self._download = download
         self._upload = upload
