@@ -1,4 +1,4 @@
-import time, smtplib, os, configparser, ssl, csv, speedtest
+import time, smtplib, os, configparser, ssl, csv, speedtest, matplotlib
 from filelock import FileLock
 from threading import *
 from pythonping import ping
@@ -85,8 +85,13 @@ def constructMessage(settings: Settings):
 
     message['From'] = settings.email_address
     message['To'] = settings.receiving_email
+
+    message_body = f'''
+    <center><h2>{settings.deployment_id} Connection Update</h2></center>
+    <p>Connection health update.</p>
+    '''
     
-    message.attach(MIMEText('This is a test.', 'plain'))
+    message.attach(MIMEText(message_body, 'html'))
 
     return message
 
