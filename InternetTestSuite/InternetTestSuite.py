@@ -1,5 +1,4 @@
 import time, smtplib, os, configparser, ssl, csv, speedtest, matplotlib
-from turtle import speed
 from tokenize import Double
 from filelock import FileLock
 from threading import *
@@ -9,7 +8,7 @@ from email.mime.multipart import MIMEMultipart
 
 config_folder = os.path.dirname(os.path.realpath(__file__))
 
-#Setting class to handle the read and management of the config.ini file
+# Setting class to handle the read and management of the config.ini file
 class Settings:
     def __init__(self, folder_path):
         self.path = os.path.join(folder_path, 'config.ini').replace('\\','/')
@@ -27,6 +26,7 @@ class Settings:
             self.email_day = config['Application Config']['Log Day']
             self.email_time = config['Application Config']['Log Time']
 
+# Simple class for conneciton status result storage
 class connection_status:
     def __init__(self, time: Double, connection_up: bool) -> None:
         self._time = time
@@ -40,6 +40,7 @@ class connection_status:
     def connection_up(self):
         return self._connection_up
 
+# Simple class for speedtest result storage
 class speedtest_result:
     def __init__(self, time: Double, download: Double, upload: Double) -> None:
         self._time = time
@@ -70,7 +71,7 @@ def checkConnection() -> connection_status:
     except RuntimeError as e:
         return connection_status(timeStamp, False)
 
-#Execute a speedTest and return the results in Mbit/s as a tuple (Download, Upload)
+# Execute a speedTest and return the results in Mbit/s as a tuple (Download, Upload)
 def speedTest() -> speedtest_result:
     timeStamp = time.time()
     if checkConnection().connection_up:
@@ -79,7 +80,7 @@ def speedTest() -> speedtest_result:
     else:
         return speedtest_result(timeStamp, 0, 0)
 
-#Pass in the file to be written to, the headers for the first line of the file and the adat to be written.
+# Pass in the file to be written to, the headers for the first line of the file and the adat to be written.
 def writeToCSV(file, headers, data):
     lock = FileLock(file + '.lock')
     lock.acquire()
@@ -97,15 +98,37 @@ def writeToCSV(file, headers, data):
 
     lock.release()
 
-#Write the status of a connection check to the file
+# Write the status of a connection check to the file
 def writeConnectionStatus(status: connection_status):
     writeToCSV('connection_status.csv', ['Timestamp','Live'], (status.time, status.connection_up))
 
-#Run a speedtest and write the results to a CSV
+# Run a speedtest and write the results to a CSV
 def writeSpeedtestResults(results: speedtest_result):
     writeToCSV('speedtest_results.csv',['Timestamp', 'Download', 'Upload'], (results.time, results.download, results.upload))
 
-#Construc the and return a MIMEMultipart email message.
+# Construct a list 
+def constructObjectListFromCSV(file, constrution_function):
+    lock = FileLock(file + '.lock')
+    lock.acquire()
+
+    with lock:
+        if os.path.exists(file) and os.path.isfile(file):
+            with open(file, 'r', newline='') as f:
+                reader = csv.reader(f)
+                return_objects = []
+                for i in range(1, len(reader)) :
+                    return_objects.append(constrution_function(reader[i]))
+                return return_objects
+
+    lock.release()
+
+def constructConnectionStatus(data: list) -> connection_status:
+    return connection_status(data[0], data[1])
+
+def constructSpeedtestResult(data: list) -> speedtest_result:
+    return speedtest_result(data[0], data[1], data[2])
+
+# Construct the and return a MIMEMultipart email message.
 def constructMessage(settings: Settings):
     message = MIMEMultipart('alternative')
 
@@ -128,7 +151,7 @@ def constructMessage(settings: Settings):
 
     return message
 
-#Send a passed MIMEMultipart email message.
+# Send a passed MIMEMultipart email message.
 def sendEmail(settings: Settings, message: MIMEMultipart):
     context = ssl.create_default_context()
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
