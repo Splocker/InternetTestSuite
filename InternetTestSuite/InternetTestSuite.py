@@ -1,4 +1,6 @@
 import time, smtplib, os, configparser, ssl, csv, speedtest, matplotlib
+from turtle import speed
+from tokenize import Double
 from filelock import FileLock
 from threading import *
 from pythonping import ping
@@ -24,27 +26,58 @@ class Settings:
             self.email_frequency = config['Application Config']['Log Frequency']
             self.email_day = config['Application Config']['Log Day']
             self.email_time = config['Application Config']['Log Time']
+
+class connection_status:
+    def __init__(self, time: Double, connection_up: bool) -> None:
+        self._time = time
+        self._connection_up = connection_up
+
+    @property
+    def time(self):
+        return self._time
+
+    @property
+    def connection_up(self):
+        return self._connection_up
+
+class speedtest_result:
+    def __init__(self, time: Double, download: Double, upload: Double) -> None:
+        self._time = time
+        self._download = download
+        self._upload = upload
+
+    @property
+    def time(self):
+        return self._time
+
+    @property
+    def download(self):
+        return self._download
+
+    @property
+    def upload(self):
+        return self._upload
         
 # If a ping to facebook or google make it though you have internet, otherwise you 
 # either don't have internet or something very unusual is happening.
-def checkConnection():
+def checkConnection() -> connection_status:
     timeStamp = time.time()
     try:
         if ((ping('facebook.com').success != False) or (ping('google.com').success != False)):
-            return (timeStamp, True)
+            return connection_status(timeStamp, True)
         else:
             return (timeStamp, False)
     except RuntimeError as e:
-        return (timeStamp, False)
+        return connection_status(timeStamp, False)
 
 #Execute a speedTest and return the results in Mbit/s as a tuple (Download, Upload)
-def speedTest():
+def speedTest() -> speedtest_result:
     timeStamp = time.time()
-    if checkConnection()[1]:
+    if checkConnection().connection_up:
         speedTest = speedtest.Speedtest()
-        return (timeStamp, speedTest.download()/1000000, speedTest.upload()/1000000)
+        return speedtest_result(timeStamp, speedTest.download()/1000000, speedTest.upload()/1000000)
     else:
-        return (timeStamp, 0, 0)
+        return speedtest_result(timeStamp, 0, 0)
 
 #Pass in the file to be written to, the headers for the first line of the file and the adat to be written.
 def writeToCSV(file, headers, data):
@@ -65,12 +98,12 @@ def writeToCSV(file, headers, data):
     lock.release()
 
 #Write the status of a connection check to the file
-def writeConnectionStatus(status):
-    writeToCSV('connection_status.csv', ['Timestamp','Live'], status)
+def writeConnectionStatus(status: connection_status):
+    writeToCSV('connection_status.csv', ['Timestamp','Live'], (status.time, status.connection_up))
 
 #Run a speedtest and write the results to a CSV
-def writeSpeedtestResults(results):
-    writeToCSV('speedtest_results.csv',['Timestamp', 'Download', 'Upload'], results)
+def writeSpeedtestResults(results: speedtest_result):
+    writeToCSV('speedtest_results.csv',['Timestamp', 'Download', 'Upload'], (results.time, results.download, results.upload))
 
 #Construc the and return a MIMEMultipart email message.
 def constructMessage(settings: Settings):
