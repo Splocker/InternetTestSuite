@@ -8,6 +8,7 @@ Required non-standard libraries:
 - speedtest
 - pythonping
 - filelock
+- matplotlib
 
 Planned Feature List:
 - Config file
