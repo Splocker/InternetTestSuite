@@ -345,3 +345,7 @@ config.ini
 #Data storage files
 speedtest_results.csv
 connection_status.csv
+
+#image files
+speed_test.png
+connection_status.png
